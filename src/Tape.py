@@ -1,7 +1,14 @@
-import random
-import time
+default_node_char = '_'
 
-default_node_char = ' '
+
+def accept_symbol(sym):
+    if len(sym) == 1:
+        if sym == '*':
+            raise ValueError("cannot set symbol '*' for node")
+        else:
+            return True
+    else:
+        raise ValueError(f"symbol must have length 1, not {len(sym)}")
 
 
 class Node(object):
@@ -24,13 +31,8 @@ class Node(object):
 
     @symbol.setter
     def symbol(self, sym: str):
-        if len(sym) == 1:
-            if sym == '*':
-                raise ValueError("cannot set symbol '*' for node")
-            else:
-                self.__symbol = sym
-        else:
-            raise ValueError(f"symbol must have length 1, not {len(sym)}")
+        if accept_symbol(sym):
+            self.__symbol = sym
 
     def __str__(self):
         return self.__symbol
@@ -38,7 +40,7 @@ class Node(object):
 
 class Tape(object):
 
-    def __init__(self, default_str: str=None, position=0):
+    def __init__(self, default_str: str = None, position: int = 0):
         self.active_node: Node = Node()
         self.left: Node = self.active_node
         self.right: Node = self.active_node
@@ -82,20 +84,5 @@ class Tape(object):
 
     def __str__(self):
         upper: str = ''.join(str(node) for node in self)
-        lower: str = ' ' * (self.__active_node_pos - 1) + '^' + ' ' * (self.size - self.__active_node_pos - 1)
+        lower: str = ' ' * self.__active_node_pos + '^'
         return f"{upper}\n{lower}"
-
-
-if __name__ == '__main__':
-    t = Tape()
-
-    print()
-    print()
-    for i in range(10):
-        print("\x1b[3F")
-        time.sleep(0.1)
-        print(str(t))
-        if random.randint(0, 1):
-            t.move_left()
-        else:
-            t.move_right()
