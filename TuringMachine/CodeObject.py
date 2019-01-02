@@ -1,11 +1,10 @@
 import re
-from functools import partial
 from typing import List, Dict, Set
 
-from src.Tape import Tape
+from .Tape import Tape
 
 
-class CodeString(object):
+class CodeObject(object):
     __slots__ = ("block_name", "change_from", "change_to", "move_to", "go_to", "__original")
 
     def __init__(self, code_str: str):
@@ -22,52 +21,67 @@ class CodeString(object):
 
     def __match_pattern(self):
         block_name = r"\w+"
-        available_chars = r"""[0-9 _a-zA-Z*:;'"\|/,.?()]"""
+        available_chars = r"""[0-9_a-zA-Z*:;'"\|/,.?()]"""
         directions = r"[lhrLHR]"
         pattern = f"{block_name} {available_chars} {available_chars} {directions} {block_name}"
         code_re = re.compile(pattern)
-        result = re.findall(code_re, self.__original)
+        result = re.match(code_re, self.__original)
         return result
 
     def __str__(self):
         return self.__original
 
+    def __call__(self, t: Tape):
+        if self.change_to != '*':
+            t.active_node.symbol = self.change_to
 
-def code_func(*, t: Tape, s: CodeString):
-    if s.change_to != '*':
-        t.active_node.symbol = s.change_to
+        if self.move_to in 'Rr':
+            t.move_right()
+        elif self.move_to in 'Ll':
+            t.move_left()
 
-    if s.move_to in 'Rr':
-        t.move_right()
-    else:
-        t.move_left()
-    return s.go_to
+        return self.go_to
 
 
 class Worker(object):
+    class CodeDict(dict):
+
+        def __init__(self):
+            def error_func(t: Tape):
+                raise KeyError(f"No matching action for '{t.active_node.symbol}' symbol")
+
+            self.__func = error_func
+            super().__init__()
+
+        def __setitem__(self, key, value: CodeObject):
+            if key == '*':
+                self.__func_any = CodeObject
+            else:
+                super().__setitem__(key, value)
+
+        def __missing__(self, key):
+            return self.__func
 
     def __init__(self, code_strings: List[str]):
-        self.__blocks: List[CodeString] = [CodeString(_str) for _str in code_strings]
+        self.__blocks: List[CodeObject] = [CodeObject(s) for s in code_strings if s.strip()]
         self.__in_names: Set[str] = set()
         self.__out_names: Set[str] = set()
         self.__compiled: Dict[str, Dict[str, type(lambda: ())]] = dict()
 
-    def __find_names(self):
+    def compile(self):
         for code_obj in self.__blocks:
-            self.__in_names.add(code_obj.block_name)
+            block_name = code_obj.block_name
+            self.__in_names.add(block_name)
+            if block_name not in self.__compiled.keys():
+                self.__compiled[block_name] = Worker.CodeDict()
+                self.__compiled[block_name].setdefault('*')
             self.__out_names.add(code_obj.go_to)
 
         if "start" not in self.__in_names or "end" not in self.__out_names:
             raise SyntaxError("'start' and 'end' must be in code")
 
-    def compile(self):
-        self.__find_names()
-
-        for in_name in self.__in_names:
-            self.__compiled[in_name] = dict()
-
         for code_obj in self.__blocks:
-            self.__compiled[code_obj.block_name][code_obj.change_from] = partial(code_func, s=code_obj)
+            self.__compiled[code_obj.block_name][code_obj.change_from] = code_obj
 
     def run(self, tape: Tape, out_file=None):
         current_block = "start"

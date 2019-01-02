@@ -4,11 +4,11 @@ default_node_char = '_'
 def accept_symbol(sym):
     if len(sym) == 1:
         if sym == '*':
-            raise ValueError("cannot set symbol '*' for node")
+            raise ValueError("Setting symbol '*' is forbidden")
         else:
             return True
     else:
-        raise ValueError(f"symbol must have length 1, not {len(sym)}")
+        raise ValueError(f"Symbol must have length 1, not {len(sym)}")
 
 
 class Node(object):

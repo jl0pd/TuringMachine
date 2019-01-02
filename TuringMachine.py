@@ -1,5 +1,5 @@
-from src.CodeObject import Worker
-from src.Tape import Tape
+from TuringMachine.CodeObject import Worker
+from TuringMachine.Tape import Tape
 
 if __name__ == '__main__':
     file_path = "example.TMProgram"
